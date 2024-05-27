@@ -227,6 +227,8 @@ void MainFrame::refreshTopics(wxCommandEvent &event)
             wxString topic = rosListBox->GetStringSelection();
             string info_text = executeCommand(("ros2 topic info " + topic.ToStdString()).c_str());
             wxMessageBox(info_text, topic.ToStdString(), wxOK | wxICON_INFORMATION);
+
+            std::cout << getEquivalentMessageType("sensor_msgs/msg/LaserScan", true) << std::endl;
         });
 
 
