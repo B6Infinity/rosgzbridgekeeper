@@ -147,100 +147,113 @@ void MainFrame::refreshTopics(wxCommandEvent &event)
         }
     }
 
+    wxButton *bridgeCreateButton = dynamic_cast<wxButton *>(FindWindowById(ID_BTN_CREATE_BRIDGE));
+    wxListBox *ignListBox = dynamic_cast<wxListBox *>(FindWindowById(ID_LBOX_IGN_TOPICS));
+    wxListBox *rosListBox = dynamic_cast<wxListBox *>(FindWindowById(ID_LBOX_ROS_TOPICS));
+    wxListBox *bridgedListBox = dynamic_cast<wxListBox *>(FindWindowById(ID_LBOX_BRIDGE_TOPICS));
     // Update UI ---------------------
     {
-        wxListBox *ignListBox = dynamic_cast<wxListBox *>(FindWindowById(ID_LBOX_IGN_TOPICS));
-        wxListBox *rosListBox = dynamic_cast<wxListBox *>(FindWindowById(ID_LBOX_ROS_TOPICS));
-        wxListBox *bridgedListBox = dynamic_cast<wxListBox *>(FindWindowById(ID_LBOX_BRIDGE_TOPICS));
 
+        // Button Text
+        bridgeCreateButton->SetLabel("Bridge Selected");
+        bridgeCreateButton->Disable();
 
         cout << "Updating UI\n";
+
         // IGN Topics ----------------
-        ignListBox->Clear();
-        for (const string &topic : ign_topics)
-            ignListBox->Append(topic);
+        {
+            ignListBox->Clear();
+            for (const string &topic : ign_topics)
+                ignListBox->Append(topic);
 
-        // IGN List Box event handlers
-        ignListBox->Bind(wxEVT_COMMAND_LISTBOX_SELECTED, [=](wxCommandEvent& event) {
-            wxString selectedTopic = ignListBox->GetStringSelection();
+            // IGN List Box event handlers
+            ignListBox->Bind(wxEVT_COMMAND_LISTBOX_SELECTED, [=](wxCommandEvent &event)
+                             {
+                                 wxString selectedTopic = ignListBox->GetStringSelection();
 
-            int rlbIndex = rosListBox->FindString(selectedTopic);
-            if (rlbIndex != wxNOT_FOUND) {
-                rosListBox->SetSelection(rlbIndex);
-            }else{
-                rosListBox->SetSelection(-1);
-            }
+                                 int rlbIndex = rosListBox->FindString(selectedTopic);
+                                 if (rlbIndex != wxNOT_FOUND)
+                                 {
+                                     rosListBox->SetSelection(rlbIndex);
+                                     bridgeCreateButton->Disable();
+                                 }
+                                 else
+                                 {
+                                     rosListBox->SetSelection(-1);
+                                     bridgeCreateButton->Enable();
+                                 }
 
-            int blbIndex = bridgedListBox->FindString(selectedTopic);
-            if (blbIndex != wxNOT_FOUND)
-            {
-                bridgedListBox->SetSelection(blbIndex);
-            }else{
-                bridgedListBox->SetSelection(-1);
-            }
-            
+                                 int blbIndex = bridgedListBox->FindString(selectedTopic);
+                                 if (blbIndex != wxNOT_FOUND)
+                                 {
+                                     bridgedListBox->SetSelection(blbIndex);
+                                     bridgeCreateButton->Disable();
+                                 }
+                                 else
+                                 {
+                                     bridgedListBox->SetSelection(-1);
+                                     bridgeCreateButton->Enable();
+                                 } });
 
-        });
-
-        // Double Click to get topic info
-        ignListBox->Bind(wxEVT_LISTBOX_DCLICK, [=](wxCommandEvent& event){
+            // Double Click to get topic info
+            ignListBox->Bind(wxEVT_LISTBOX_DCLICK, [=](wxCommandEvent &event)
+                             {
             wxString topic = ignListBox->GetStringSelection();
             string info_text = executeCommand(("ign topic -i -t " + topic.ToStdString()).c_str());
-            wxMessageBox(info_text, topic.ToStdString(), wxOK | wxICON_INFORMATION);
-        });
-
-
-
-
-
-        // ROS Topics
-
-        rosListBox->Clear();
-
-        for (const string &topic : ros_topics)
-        {
-            rosListBox->Append(topic);
+            wxMessageBox(info_text, topic.ToStdString(), wxOK | wxICON_INFORMATION); });
         }
 
-        // rosListBox Event Handlers -----------
+        // ROS Topics ----------------
+        {
+            rosListBox->Clear();
 
-        rosListBox->Bind(wxEVT_COMMAND_LISTBOX_SELECTED, [=](wxCommandEvent& event) {
+            for (const string &topic : ros_topics)
+            {
+                rosListBox->Append(topic);
+            }
+
+            // rosListBox Event Handlers -----------
+
+            rosListBox->Bind(wxEVT_COMMAND_LISTBOX_SELECTED, [=](wxCommandEvent &event)
+                             {
             wxString selectedTopic = rosListBox->GetStringSelection();
 
             int ilbIndex = ignListBox->FindString(selectedTopic);
             if (ilbIndex != wxNOT_FOUND) {
-                ignListBox->SetSelection(ilbIndex);
+                ignListBox->SetSelection(ilbIndex); bridgeCreateButton->Enable();
             }else{
-                ignListBox->SetSelection(-1);
+                ignListBox->SetSelection(-1); bridgeCreateButton->Enable();
             }
 
             int blbIndex = bridgedListBox->FindString(selectedTopic);
             if (blbIndex != wxNOT_FOUND)
             {
-                bridgedListBox->SetSelection(blbIndex);
+                bridgedListBox->SetSelection(blbIndex); bridgeCreateButton->Disable();
             }else{
-                bridgedListBox->SetSelection(-1);
-            }
-        });
-        // Double Click to get topic info
-        rosListBox->Bind(wxEVT_LISTBOX_DCLICK, [=](wxCommandEvent& event){
-            wxString topic = rosListBox->GetStringSelection();
-            string info_text = executeCommand(("ros2 topic info " + topic.ToStdString()).c_str());
-            wxMessageBox(info_text, topic.ToStdString(), wxOK | wxICON_INFORMATION);
+                bridgedListBox->SetSelection(-1); bridgeCreateButton->Enable();
+            } });
+            // Double Click to get topic info
+            rosListBox->Bind(wxEVT_LISTBOX_DCLICK, [=](wxCommandEvent &event)
+                             {
+                                 wxString topic = rosListBox->GetStringSelection();
+                                 string info_text = executeCommand(("ros2 topic info " + topic.ToStdString()).c_str());
+                                 wxMessageBox(info_text, topic.ToStdString(), wxOK | wxICON_INFORMATION | wxOK_DEFAULT | wxCANCEL);
 
-            std::cout << getEquivalentMessageType("sensor_msgs/msg/LaserScan", true) << std::endl;
-        });
+                                 // std::cout << getEquivalentMessageType("sensor_msgs/msg/LaserScan", true) << std::endl;
+                             });
+        }
 
+        // Bridged Topics ----------------
+        {
 
-        // Bridged Topics
+            bridgedListBox->Clear();
 
-        bridgedListBox->Clear();
+            for (const string &topic : bridged_topics)
+                bridgedListBox->Append(topic);
+            bridgedListBox->SetForegroundColour(wxColour(0, 255, 0)); // Set text color to green
 
-        for (const string &topic : bridged_topics)
-            bridgedListBox->Append(topic);
-        bridgedListBox->SetForegroundColour(wxColour(0, 255, 0)); // Set text color to green
-
-        bridgedListBox->Bind(wxEVT_COMMAND_LISTBOX_SELECTED, [=](wxCommandEvent& event) {
+            bridgedListBox->Bind(wxEVT_COMMAND_LISTBOX_SELECTED, [=](wxCommandEvent &event)
+                                 {
             wxString selectedTopic = bridgedListBox->GetStringSelection();
 
             int ilbIndex = ignListBox->FindString(selectedTopic);
@@ -256,16 +269,65 @@ void MainFrame::refreshTopics(wxCommandEvent &event)
                 rosListBox->SetSelection(rlbIndex);
             }else{
                 rosListBox->SetSelection(-1);
-            }
-        });
+            } 
+            
+            bridgeCreateButton->Disable(); });
 
-        // Double Click to get topic info
-        bridgedListBox->Bind(wxEVT_LISTBOX_DCLICK, [=](wxCommandEvent& event){
+            // Double Click to get topic info
+            bridgedListBox->Bind(wxEVT_LISTBOX_DCLICK, [=](wxCommandEvent &event)
+                                 {
             wxString topic = bridgedListBox->GetStringSelection();
             string info_text = executeCommand(("ros2 topic info " + topic.ToStdString()).c_str());
-            wxMessageBox(info_text, topic.ToStdString(), wxOK | wxICON_INFORMATION);
-        });
+            wxMessageBox(info_text, topic.ToStdString(), wxOK | wxICON_INFORMATION); });
+        }
     }
 
     SetStatusText("Done!");
+
+    // Bridge Create Button Utility
+    {
+        bridgeCreateButton->Bind(wxEVT_BUTTON, [=](wxCommandEvent &event)
+                                 {
+                                     wxString selectedTopic;
+                                     std::string topicInfo;
+                                     std::string equivalentMessageType;
+                                     std::string searchString = "ignition.msgs.";
+
+                                     selectedTopic = ignListBox->GetStringSelection();
+
+                                     if (selectedTopic.IsEmpty())
+                                     {
+                                         selectedTopic = rosListBox->GetStringSelection();
+                                         topicInfo = executeCommand("ros2 topic info " + selectedTopic);
+                                         searchString = "Type: ";
+                                     }
+                                     else
+                                     {
+                                         topicInfo = executeCommand("ign topic -i -t " + selectedTopic);
+                                     }
+
+                                     // Extracting the substring
+                                     size_t startPos = topicInfo.find(searchString);
+                                     if (startPos != std::string::npos)
+                                     {
+                                         startPos += searchString.length();
+                                         size_t endPos = topicInfo.find('\n', startPos);
+                                         if (endPos != std::string::npos)
+                                         {
+                                             std::string messageType = topicInfo.substr(startPos, endPos - startPos);
+                                             if (searchString == "ignition.msgs.")
+                                             {
+                                                messageType = "ignition.msgs."+messageType;
+                                             }
+                                             equivalentMessageType = getEquivalentMessageType(messageType.c_str(), searchString != "ignition.msgs.");
+
+                                             
+                                             std::cout << "Message Type: " << messageType << std::endl;
+                                             cout << ("tf2_msgs/msg/TFMessage" == messageType.c_str()) << endl;
+                                            //  std::cout << "Equivalent Type: " << equivalentMessageType << std::endl;
+                                            cout << getEquivalentMessageType("tf2_msgs/msg/TFMessage", false) << endl;
+
+                                         }
+                                     } });
+    }
 }
