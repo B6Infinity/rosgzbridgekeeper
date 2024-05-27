@@ -23,3 +23,4 @@ std::string executeCommand(const char *command)
     }
     return result;
 }
+

@@ -182,6 +182,13 @@ void MainFrame::refreshTopics(wxCommandEvent &event)
 
         });
 
+        // Double Click to get topic info
+        ignListBox->Bind(wxEVT_LISTBOX_DCLICK, [=](wxCommandEvent& event){
+            wxString topic = ignListBox->GetStringSelection();
+            string info_text = executeCommand(("ign topic -i -t " + topic.ToStdString()).c_str());
+            wxMessageBox(info_text, topic.ToStdString(), wxOK | wxICON_INFORMATION);
+        });
+
 
 
 
@@ -195,7 +202,7 @@ void MainFrame::refreshTopics(wxCommandEvent &event)
             rosListBox->Append(topic);
         }
 
-        // rosListBox Event Handlers
+        // rosListBox Event Handlers -----------
 
         rosListBox->Bind(wxEVT_COMMAND_LISTBOX_SELECTED, [=](wxCommandEvent& event) {
             wxString selectedTopic = rosListBox->GetStringSelection();
@@ -215,6 +222,13 @@ void MainFrame::refreshTopics(wxCommandEvent &event)
                 bridgedListBox->SetSelection(-1);
             }
         });
+        // Double Click to get topic info
+        rosListBox->Bind(wxEVT_LISTBOX_DCLICK, [=](wxCommandEvent& event){
+            wxString topic = rosListBox->GetStringSelection();
+            string info_text = executeCommand(("ros2 topic info " + topic.ToStdString()).c_str());
+            wxMessageBox(info_text, topic.ToStdString(), wxOK | wxICON_INFORMATION);
+        });
+
 
         // Bridged Topics
 
@@ -241,6 +255,13 @@ void MainFrame::refreshTopics(wxCommandEvent &event)
             }else{
                 rosListBox->SetSelection(-1);
             }
+        });
+
+        // Double Click to get topic info
+        bridgedListBox->Bind(wxEVT_LISTBOX_DCLICK, [=](wxCommandEvent& event){
+            wxString topic = bridgedListBox->GetStringSelection();
+            string info_text = executeCommand(("ros2 topic info " + topic.ToStdString()).c_str());
+            wxMessageBox(info_text, topic.ToStdString(), wxOK | wxICON_INFORMATION);
         });
     }
 
