@@ -25,6 +25,15 @@ MainFrame::MainFrame() : wxFrame(nullptr, wxID_ANY, APP_NAME)
 
     SetSizer(generateMainSizer(this));
 
+
+    // Load DB
+    int size = loadDB();
+    std::cout << size << std::endl;
+    if (size < 4)
+    {
+        wxMessageBox("Could not find 'DB.csv'", "Error", wxOK | wxICON_ERROR);
+    }
+    
     // ________________________ UI DONE ___________________________
 
     // Bind Event Handlers

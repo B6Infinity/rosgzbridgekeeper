@@ -6,5 +6,5 @@
 // std::map<std::string, std::string> db;
 
 std::string executeCommand(const char *command);
-void loadDB();
+int loadDB();
 std::string getEquivalentMessageType(const char *mtype, const bool getign);

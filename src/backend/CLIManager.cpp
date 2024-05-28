@@ -28,7 +28,7 @@ std::string executeCommand(const char *command)
 
 std::map<std::string, std::string> db;
 
-void loadDB()
+int loadDB()
 {
     using namespace std;
     ifstream file("DB.csv");
@@ -50,7 +50,9 @@ void loadDB()
         std::cout << "Failed to open DB.csv" << std::endl;
     }
 
-    std::cout << db.size() << std::endl;
+    // std::cout << db.size() << std::endl;
+
+    return db.size();
 }
 
 std::string getEquivalentMessageType(const char *mtype, const bool getign = true)
