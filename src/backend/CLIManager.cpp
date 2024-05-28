@@ -7,11 +7,10 @@
 #include <sstream>
 #include "CLIManager.h"
 
-
 std::string executeCommand(const char *command)
 {
 
-    std::cout<< "Executing `" << command << "` ..." << std::endl;
+    std::cout << "Executing `" << command << "` ..." << std::endl;
     std::string result;
     FILE *pipe = popen(command, "r");
     if (pipe)
@@ -26,8 +25,6 @@ std::string executeCommand(const char *command)
     }
     return result;
 }
-
-
 
 std::map<std::string, std::string> db;
 
@@ -54,19 +51,28 @@ void loadDB()
     }
 
     std::cout << db.size() << std::endl;
-
 }
 
 std::string getEquivalentMessageType(const char *mtype, const bool getign = true)
 {
+
+    std::string modifiedMtype = mtype;
+    std::string searchString = "ignition";
+    std::string replaceString = "gz";
+    size_t pos = modifiedMtype.find(searchString);
+    while (pos != std::string::npos)
+    {
+        modifiedMtype.replace(pos, searchString.length(), replaceString);
+        pos = modifiedMtype.find(searchString, pos + replaceString.length());
+    }
+    mtype = modifiedMtype.c_str();
 
     if (db.size() == 0)
     {
         std::cout << "Loading message types from DB.csv" << std::endl;
         loadDB();
     }
-    
-    
+
     if (!getign)
     {
         for (const auto &pair : db)
@@ -81,3 +87,4 @@ std::string getEquivalentMessageType(const char *mtype, const bool getign = true
 
     return db[mtype];
 }
+

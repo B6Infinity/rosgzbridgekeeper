@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <string>
 #include <wx/wx.h>
+#include <thread>
 
 #include "globals.h"
 #include "MainFrame.h"
@@ -60,7 +61,6 @@ void MainFrame::OnHello(wxCommandEvent &event)
 
 void MainFrame::showLoadingTopics(wxCommandEvent &event)
 {
-    std::cout << "Look\n";
     SetStatusText("Fetching Topics...");
 
     wxBusyCursor busyCursor;
@@ -239,7 +239,6 @@ void MainFrame::refreshTopics(wxCommandEvent &event)
                                  string info_text = executeCommand(("ros2 topic info " + topic.ToStdString()).c_str());
                                  wxMessageBox(info_text, topic.ToStdString(), wxOK | wxICON_INFORMATION | wxOK_DEFAULT | wxCANCEL);
 
-                                 // std::cout << getEquivalentMessageType("sensor_msgs/msg/LaserScan", true) << std::endl;
                              });
         }
 
@@ -287,47 +286,75 @@ void MainFrame::refreshTopics(wxCommandEvent &event)
     // Bridge Create Button Utility
     {
         bridgeCreateButton->Bind(wxEVT_BUTTON, [=](wxCommandEvent &event)
-                                 {
-                                     wxString selectedTopic;
-                                     std::string topicInfo;
-                                     std::string equivalentMessageType;
-                                     std::string searchString = "ignition.msgs.";
+        {
+            wxString selectedTopic;
+            std::string topicInfo;
+            std::string equivalentMessageType;
+            std::string searchString = "ignition.msgs.";
 
-                                     selectedTopic = ignListBox->GetStringSelection();
+            bool getIGN = false;
 
-                                     if (selectedTopic.IsEmpty())
-                                     {
-                                         selectedTopic = rosListBox->GetStringSelection();
-                                         topicInfo = executeCommand("ros2 topic info " + selectedTopic);
-                                         searchString = "Type: ";
-                                     }
-                                     else
-                                     {
-                                         topicInfo = executeCommand("ign topic -i -t " + selectedTopic);
-                                     }
+            selectedTopic = ignListBox->GetStringSelection();
 
-                                     // Extracting the substring
-                                     size_t startPos = topicInfo.find(searchString);
-                                     if (startPos != std::string::npos)
-                                     {
-                                         startPos += searchString.length();
-                                         size_t endPos = topicInfo.find('\n', startPos);
-                                         if (endPos != std::string::npos)
-                                         {
-                                             std::string messageType = topicInfo.substr(startPos, endPos - startPos);
-                                             if (searchString == "ignition.msgs.")
-                                             {
-                                                messageType = "ignition.msgs."+messageType;
-                                             }
-                                             equivalentMessageType = getEquivalentMessageType(messageType.c_str(), searchString != "ignition.msgs.");
+            if (selectedTopic.IsEmpty())
+            {
+                selectedTopic = rosListBox->GetStringSelection();
+                topicInfo = executeCommand("ros2 topic info " + selectedTopic);
+                searchString = "Type: ";
+                getIGN = true;
+            }
+            else
+            {
+                topicInfo = executeCommand("ign topic -i -t " + selectedTopic);
+                getIGN = false;
+            }
 
-                                             
-                                             std::cout << "Message Type: " << messageType << std::endl;
-                                             cout << ("tf2_msgs/msg/TFMessage" == messageType.c_str()) << endl;
-                                            //  std::cout << "Equivalent Type: " << equivalentMessageType << std::endl;
-                                            cout << getEquivalentMessageType("tf2_msgs/msg/TFMessage", false) << endl;
 
-                                         }
-                                     } });
+            // Extracting the substring
+            size_t startPos = topicInfo.find(searchString);
+            if (startPos != std::string::npos)
+            {
+                startPos += searchString.length();
+                size_t endPos = topicInfo.find('\n', startPos);
+                if (endPos != std::string::npos)
+                {
+                    std::string messageType = topicInfo.substr(startPos, endPos - startPos);
+                    if (searchString == "ignition.msgs.")
+                    {
+                    messageType = "ignition.msgs."+messageType;
+                    }
+                    equivalentMessageType = getEquivalentMessageType(messageType.c_str(), getIGN);
+
+                    
+                    std::cout << "Message Type: " << messageType;
+                    std::cout << "\tEquivalent Type: " << equivalentMessageType << std::endl;
+
+                    if (equivalentMessageType.empty())
+                    {
+                        wxMessageBox("Equivalent message type not found!", "Error", wxOK | wxICON_ERROR);
+                    }
+
+                // ros2 run ros_gz_bridge parameter_bridge /model/vehicle_blue/cmd_vel@geometry_msgs/msg/Twist]ignition.msgs.Twist
+
+                SetStatusText("Creating seperate bridge thread for " + selectedTopic);
+                std::thread commandThread([selectedTopic, messageType, equivalentMessageType, getIGN]() {
+                    std::string command;
+                    if (getIGN)
+                    {
+                        command = "ros2 run ros_gz_bridge parameter_bridge " + selectedTopic + "@" + messageType + "@" + equivalentMessageType;
+                    }else{
+                        command = "ros2 run ros_gz_bridge parameter_bridge " + selectedTopic + "@" + equivalentMessageType + "@" + messageType;
+                    }
+                    
+                    std::system(command.c_str());
+                });
+                commandThread.detach();
+
+                SetStatusText("Done!");
+
+                showLoadingTopics(event);
+
+                }
+            } });
     }
 }
