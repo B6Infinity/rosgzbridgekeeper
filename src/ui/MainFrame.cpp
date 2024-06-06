@@ -391,3 +391,5 @@ void MainFrame::setVersion(wxCommandEvent &event){
 
     gzVersionButton->SetLabel(GZ_VERSION);
 }
+
+// TODO: Store bridge threads in a vector
