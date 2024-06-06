@@ -13,4 +13,5 @@ private:
 
     void showLoadingTopics(wxCommandEvent &event);
     void refreshTopics(wxCommandEvent &event);
+    void setVersion(wxCommandEvent &event);
 };

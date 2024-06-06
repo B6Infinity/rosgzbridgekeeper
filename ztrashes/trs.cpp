@@ -62,7 +62,7 @@ std::vector<std::string> get_ign_topics(){
 int main()
 {
     std::vector<std::string> ros_topics = get_ros_topics();
-    std::vector<std::string> ign_topics = get_ign_topics();
+    std::vector<std::string> gazebosim_topics = get_ign_topics();
 
     std::cout << "\n\n";
 
@@ -70,7 +70,7 @@ int main()
         std::cout << rtopic << ": ";
 
         bool found = false;
-        for (const string itopic : ign_topics) {
+        for (const string itopic : gazebosim_topics) {
             if (rtopic == itopic) {
                 found = true;
                 break;

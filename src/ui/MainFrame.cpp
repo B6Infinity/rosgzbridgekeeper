@@ -11,7 +11,7 @@
 #include "components/mainSizer.cpp"
 #include "components/menuBar.cpp"
 
-std::vector<std::string> ign_topics;
+std::vector<std::string> gazebosim_topics;
 std::vector<std::string> ros_topics;
 std::vector<std::string> bridged_topics;
 
@@ -25,7 +25,6 @@ MainFrame::MainFrame() : wxFrame(nullptr, wxID_ANY, APP_NAME)
 
     SetSizer(generateMainSizer(this));
 
-
     // Load DB
     int size = loadDB();
     std::cout << size << std::endl;
@@ -33,7 +32,7 @@ MainFrame::MainFrame() : wxFrame(nullptr, wxID_ANY, APP_NAME)
     {
         wxMessageBox("Could not find 'DB.csv'", "Error", wxOK | wxICON_ERROR);
     }
-    
+
     // ________________________ UI DONE ___________________________
 
     // Bind Event Handlers
@@ -42,6 +41,7 @@ MainFrame::MainFrame() : wxFrame(nullptr, wxID_ANY, APP_NAME)
     Bind(wxEVT_MENU, &MainFrame::OnExit, this, wxID_EXIT);
     Bind(wxEVT_MENU, &MainFrame::OnHelp, this, wxID_HELP);
     Bind(wxEVT_BUTTON, &MainFrame::showLoadingTopics, this, ID_BTN_REFRESH_TOPICS);
+    Bind(wxEVT_BUTTON, &MainFrame::setVersion, this, ID_BTN_GZ_VERSION);
 
     /*It can be convenient to use unnamed lambdas instead of functions for event handlers, especially for such short functions. Here, for example, we could replace the handler above with just*/
     // Bind(wxEVT_MENU, [=](wxCommandEvent&) { wxLogMessage("Hello from a lambda!"); }, ID_Hello);
@@ -60,7 +60,6 @@ void MainFrame::OnHelp(wxCommandEvent &event)
 {
     wxMessageBox("Info on how to use this...", "This is pretty simple", wxOK | wxICON_QUESTION);
 }
-
 void MainFrame::OnHello(wxCommandEvent &event)
 {
     wxLogMessage("Tis loggin time");
@@ -80,31 +79,42 @@ void MainFrame::showLoadingTopics(wxCommandEvent &event)
 
 void MainFrame::refreshTopics(wxCommandEvent &event)
 {
+    std::string gz_ign_key = "";
+    // if (strcmp(GZ_VERSION, "garden") == 0)
+    if (GZ_VERSION == "garden")
+    {
+        gz_ign_key = "gz";
+    }else{
+        gz_ign_key = "ign";
+    } // Version Control
+
+
     using namespace std;
 
     // Fetch and Sort Topics
-    {
-        cout << "Fetching IGN Topics..." << endl;
-        string ign_topics_str = executeCommand("ign topic -l");
+    {   
+        
+        cout << "Fetching " << gz_ign_key << " Topics..." << endl;
+        string gazebosim_topics_str = executeCommand((gz_ign_key + " topic -l").c_str());
 
-        ign_topics.clear();
+        gazebosim_topics.clear();
         string old_word = "";
-        for (size_t i = 0; i < ign_topics_str.length(); i++)
+        for (size_t i = 0; i < gazebosim_topics_str.length(); i++)
         {
-            char c = ign_topics_str[i];
+            char c = gazebosim_topics_str[i];
             if (c != '\n')
             {
                 old_word += c;
             }
             else
             {
-                ign_topics.push_back(old_word);
+                gazebosim_topics.push_back(old_word);
                 old_word = "";
             }
         }
         if (old_word.length() > 1)
         {
-            ign_topics.push_back(old_word);
+            gazebosim_topics.push_back(old_word);
         }
 
         // ROS Topics ----------------
@@ -136,7 +146,7 @@ void MainFrame::refreshTopics(wxCommandEvent &event)
         cout << "Seperating Bridged Topics..." << endl;
         bridged_topics.clear();
         // Sorry but I lack the skill to get any better than O(n^2)
-        for (const string &itopic : ign_topics)
+        for (const string &itopic : gazebosim_topics)
         {
             for (const string &rtopic : ros_topics)
             {
@@ -172,7 +182,7 @@ void MainFrame::refreshTopics(wxCommandEvent &event)
         // IGN Topics ----------------
         {
             ignListBox->Clear();
-            for (const string &topic : ign_topics)
+            for (const string &topic : gazebosim_topics)
                 ignListBox->Append(topic);
 
             // IGN List Box event handlers
@@ -208,7 +218,7 @@ void MainFrame::refreshTopics(wxCommandEvent &event)
             ignListBox->Bind(wxEVT_LISTBOX_DCLICK, [=](wxCommandEvent &event)
                              {
             wxString topic = ignListBox->GetStringSelection();
-            string info_text = executeCommand(("ign topic -i -t " + topic.ToStdString()).c_str());
+            string info_text = executeCommand((gz_ign_key + " topic -i -t " + topic.ToStdString()).c_str());
             wxMessageBox(info_text, topic.ToStdString(), wxOK | wxICON_INFORMATION); });
         }
 
@@ -247,7 +257,6 @@ void MainFrame::refreshTopics(wxCommandEvent &event)
                                  wxString topic = rosListBox->GetStringSelection();
                                  string info_text = executeCommand(("ros2 topic info " + topic.ToStdString()).c_str());
                                  wxMessageBox(info_text, topic.ToStdString(), wxOK | wxICON_INFORMATION | wxOK_DEFAULT | wxCANCEL);
-
                              });
         }
 
@@ -295,11 +304,18 @@ void MainFrame::refreshTopics(wxCommandEvent &event)
     // Bridge Create Button Utility
     {
         bridgeCreateButton->Bind(wxEVT_BUTTON, [=](wxCommandEvent &event)
-        {
+                                 {
             wxString selectedTopic;
             std::string topicInfo;
             std::string equivalentMessageType;
-            std::string searchString = "ignition.msgs.";
+            std::string searchString;
+
+            // Version Control
+            if (gz_ign_key == "ign")
+            {
+                searchString = "ignition.msgs.";
+            }else searchString = "gz.msgs";
+            
 
             bool getIGN = false;
 
@@ -314,7 +330,7 @@ void MainFrame::refreshTopics(wxCommandEvent &event)
             }
             else
             {
-                topicInfo = executeCommand("ign topic -i -t " + selectedTopic);
+                topicInfo = executeCommand(gz_ign_key + " topic -i -t " + selectedTopic);
                 getIGN = false;
             }
 
@@ -328,9 +344,9 @@ void MainFrame::refreshTopics(wxCommandEvent &event)
                 if (endPos != std::string::npos)
                 {
                     std::string messageType = topicInfo.substr(startPos, endPos - startPos);
-                    if (searchString == "ignition.msgs.")
+                    if (searchString != "Type: ")
                     {
-                    messageType = "ignition.msgs."+messageType;
+                    messageType = searchString+messageType;
                     }
                     equivalentMessageType = getEquivalentMessageType(messageType.c_str(), getIGN);
 
@@ -366,4 +382,12 @@ void MainFrame::refreshTopics(wxCommandEvent &event)
                 }
             } });
     }
+}
+
+void MainFrame::setVersion(wxCommandEvent &event){
+    wxButton *gzVersionButton = dynamic_cast<wxButton *>(FindWindowById(ID_BTN_GZ_VERSION));
+    std::string version = wxGetTextFromUser("Enter GZ_VERSION:", "Set GZ_VERSION", GZ_VERSION).ToStdString();
+    GZ_VERSION = version;
+
+    gzVersionButton->SetLabel(GZ_VERSION);
 }

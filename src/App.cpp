@@ -7,6 +7,7 @@
 #include "MainFrame.h"
 
 const char *APP_NAME = "RosGzBridgeKeeper";
+std::string GZ_VERSION = "garden";
 
 bool App::OnInit()
 {
